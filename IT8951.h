@@ -7,42 +7,44 @@
 #include <stdlib.h>
 #include <string.h>
 #include "miniGUI.h"
+#include "types.h"
 
 #define CS 				8
 #define HRDY 	        24
 #define RESET 	        17
-#define VCOM			1500 //e.g. -1.53 = 1530 = 0x5FA
 
 //prototype of structure
 //structure prototype 1
-typedef struct IT8951LdImgInfo
-{
+typedef struct IT8951LdImgInfo {
     uint16_t usEndianType; //little or Big Endian
     uint16_t usPixelFormat; //bpp
     uint16_t usRotate; //Rotate mode
     uint32_t ulStartFBAddr; //Start address of source Frame buffer
     uint32_t ulImgBufBaseAddr;//Base address of target image buffer
-    
-}IT8951LdImgInfo;
+} IT8951LdImgInfo;
 
 //structure prototype 2
-typedef struct IT8951AreaImgInfo
-{
+typedef struct IT8951AreaImgInfo {
     uint16_t usX;
     uint16_t usY;
     uint16_t usWidth;
     uint16_t usHeight;
-}IT8951AreaImgInfo;
+} IT8951AreaImgInfo;
 
-typedef struct
-{
+typedef struct {
     uint16_t usPanelW;
     uint16_t usPanelH;
     uint16_t usImgBufAddrL;
     uint16_t usImgBufAddrH;
     uint16_t usFWVersion[8]; 	//16 Bytes String
     uint16_t usLUTVersion[8]; 	//16 Bytes String
-}IT8951DevInfo;
+} IT8951DevInfo;
+
+struct Device {
+	IT8951DevInfo gstI80DevInfo;
+	uint8_t *gpFrameBuf; //Host Source Frame buffer
+	uint32_t gulImgBufAddr; //IT8951 Image buffer address
+};
 
 //Built in I80 Command Code
 #define IT8951_TCON_SYS_RUN      0x0001
@@ -62,11 +64,6 @@ typedef struct
 #define USDEF_I80_CMD_DPY_AREA     0x0034
 #define USDEF_I80_CMD_GET_DEV_INFO 0x0302
 #define USDEF_I80_CMD_DPY_BUF_AREA 0x0037
-#define USDEF_I80_CMD_VCOM		   0x0039
-
-//Panel
-#define IT8951_PANEL_WIDTH   1024 //it Get Device information
-#define IT8951_PANEL_HEIGHT   758
 
 //Rotate mode
 #define IT8951_ROTATE_0     0
@@ -126,44 +123,35 @@ typedef struct
 #define MCSR (MCSR_BASE_ADDR  + 0x0000)
 #define LISAR (MCSR_BASE_ADDR + 0x0008)
 
-uint8_t IT8951_Init(void);
-void IT8951_Cancel(void);
-void IT8951DisplayExample(void);
-void IT8951DisplayExample2(void);
-void IT8951Display1bppExample2(void);
-void IT8951DisplayExample3(void);
-void IT8951_GUI_Example(void);
-void IT8951_BMP_Example(uint32_t x, uint32_t y,char *path);
+uint8_t IT8951_Init(Device *device);
+void IT8951_Cancel(Device *device);
 
+//temp
 uint16_t IT8951ReadReg(uint16_t usRegAddr);
 void IT8951SetImgBufBaseAddr(uint32_t ulImgBufAddr);
-void LCDWaitForReady(void);
-void GetIT8951SystemInfo(void* pBuf);
+
+#define LCDWaitForReady() \
+	while (bcm2835_gpio_lev(HRDY) == 0)
+
+void GetIT8951SystemInfo(IT8951DevInfo* pstDevInfo);
 void gpio_i80_16b_cmd_out(uint16_t usCmd);
-void GPIO_Configuration_Out(void);
-void GPIO_Configuration_In(void);
 
 void IT8951DisplayClear(void);
 
 //uint16_t IT8951ReadReg(uint16_t usRegAddr);
 void IT8951WriteReg(uint16_t usRegAddr,uint16_t usValue);
 
-uint16_t IT8951GetVCOM(void);
-void IT8951SetVCOM(uint16_t vcom);
+void IT8951WaitForDisplayReady();
+
+void IT8951HostAreaPackedPixelWrite(
+  const IT8951LdImgInfo* pstLdImgInfo,
+  const IT8951AreaImgInfo* pstAreaImgInfo,
+  uint8_t *tmp
+);
+
+void IT8951DisplayArea(uint16_t usX, uint16_t usY, uint16_t usW, uint16_t usH, uint16_t usDpyMode);
+
+#define Device_width(device) ((device)->gstI80DevInfo.usPanelW)
+#define Device_height(device) ((device)->gstI80DevInfo.usPanelH)
 
 #endif
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

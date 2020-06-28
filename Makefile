@@ -1,9 +1,11 @@
-SRCS=IT8951.c miniGUI.c main.c AsciiLib.c bmp.c
+SRCS=IT8951.c miniGUI.c main.c
 CC=gcc
-TARGET=IT8951
+CFLAGS=-Wall -march=native -mtune=native -pipe
+TARGET=eink
+LDFLAGS=-lbcm2835 -lpthread
 
 $(TARGET):$(SRCS)
-	$(CC) -Wall $(SRCS) -o $(TARGET) -lbcm2835
-	
+	$(CC) $(CFLAGS) $(SRCS) -o $(TARGET) $(LDFLAGS)
+
 clean:
 	rm -f $(TARGET)
