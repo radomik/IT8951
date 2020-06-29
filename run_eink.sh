@@ -2,4 +2,4 @@
 
 . vars.sh
 
-sudo ./eink "$IMG_PATH"
+sudo ./eink -i "$IMG_PATH" $*

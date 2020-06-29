@@ -126,27 +126,16 @@ struct Device {
 uint8_t IT8951_Init(Device *device);
 void IT8951_Cancel(Device *device);
 
-//temp
-uint16_t IT8951ReadReg(uint16_t usRegAddr);
 void IT8951SetImgBufBaseAddr(uint32_t ulImgBufAddr);
 
-#define LCDWaitForReady() \
-	while (bcm2835_gpio_lev(HRDY) == 0)
-
 void GetIT8951SystemInfo(IT8951DevInfo* pstDevInfo);
-void gpio_i80_16b_cmd_out(uint16_t usCmd);
-
-void IT8951DisplayClear(void);
-
-//uint16_t IT8951ReadReg(uint16_t usRegAddr);
-void IT8951WriteReg(uint16_t usRegAddr,uint16_t usValue);
 
 void IT8951WaitForDisplayReady();
 
 void IT8951HostAreaPackedPixelWrite(
   const IT8951LdImgInfo* pstLdImgInfo,
   const IT8951AreaImgInfo* pstAreaImgInfo,
-  uint8_t *tmp
+  uint8_t bpp_mode
 );
 
 void IT8951DisplayArea(uint16_t usX, uint16_t usY, uint16_t usW, uint16_t usH, uint16_t usDpyMode);

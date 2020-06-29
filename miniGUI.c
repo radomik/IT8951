@@ -1,7 +1,6 @@
 #include <string.h>
 #include "miniGUI.h"
-
-extern IT8951DevInfo gstI80DevInfo;
+#include "measure.h"
 
 void EPD_Clear(Device *device, uint8_t color) {
 	memset(device->gpFrameBuf, color, Device_width(device) * Device_height(device));
@@ -25,7 +24,6 @@ static void Bitmap_format_Matrix(BmpBuffer *buffer)
 	uint8_t temp;
 	uint32_t count;
 
-	//由于bmp存储是从后面往前面，所以需要倒序进行转换
 	switch(buffer->bits_per_pixel)
 	{
 		case 1:
@@ -159,7 +157,7 @@ static void DrawMatrix(
 )
 {
 	uint16_t i, j, x, y;
-	uint8_t r, g, b;
+	uint8_t r=0, g=0, b=0;
 	uint8_t temp1, temp2;
 	const uint32_t w = buffer->width;
 	const uint32_t h = buffer->height;
@@ -214,6 +212,7 @@ uint8_t Show_bmp(
 	BmpBuffer *buffer,
 	const char *path
 ) {
+	meas_start();
 	BITMAPFILEHEADER FileHead;
 	BITMAPINFOHEADER InfoHead;
 	uint32_t total_length;
@@ -253,14 +252,8 @@ uint8_t Show_bmp(
 	printf("BMP_ciSize:%d \n", InfoHead.ciSize);
  	printf("BMP_ciWidth:%d \n", InfoHead.ciWidth);
 	printf("BMP_ciHeight:%d \n", InfoHead.ciHeight);
-	printf("BMP_ciPlanes:%x \n", InfoHead.ciPlanes);
 	printf("BMP_ciBitCount:%x \n", InfoHead.ciBitCount);
-	printf("BMP_ciCompress:%x \n", InfoHead.ciCompress);
 	printf("BMP_ciSizeImage:%x \n", InfoHead.ciSizeImage);
-	printf("BMP_ciXPelsPerMeter:%x \n", InfoHead.ciXPelsPerMeter);
-	printf("BMP_ciYPelsPerMeter:%x \n", InfoHead.ciYPelsPerMeter);
-	printf("BMP_ciClrUsed:%x \n", InfoHead.ciClrUsed);
-	printf("BMP_ciClrImportant:%x \n", InfoHead.ciClrImportant);
  	printf("*****************************************\n\n");
 
 	total_length = FileHead.cfSize-FileHead.cfoffBits;
@@ -372,7 +365,7 @@ uint8_t Show_bmp(
 	uint32_t y = (Device_height(device) - buffer->height) / 2;
 	printf("Display at (x0,y0) = (%u,%u)\n", x, y);
 	DrawMatrix(device, buffer, x, y);
-
+	meas_end();
 	return 0;
 }
 

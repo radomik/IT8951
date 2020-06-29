@@ -3,5 +3,6 @@
 
 typedef struct Device Device;
 typedef struct BmpBuffer BmpBuffer;
+typedef struct Opts Opts;
 
 #endif

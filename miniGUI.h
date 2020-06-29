@@ -17,7 +17,6 @@ typedef struct {
   uint16_t Y;
 } Point, *pPoint;
 
-//14byte文件头
 typedef struct {
 	uint16_t cfType;//文件类型，"BM"(0x4D42)
 	uint32_t cfSize;//文件大小（字节）
@@ -26,7 +25,6 @@ typedef struct {
 }__attribute__((packed)) BITMAPFILEHEADER;
 //__attribute__((packed))的作用是告诉编译器取消结构在编译过程中的优化对齐
 
-//40byte信息头
 typedef struct {
 	uint32_t ciSize;//40
 	uint32_t ciWidth;//宽度

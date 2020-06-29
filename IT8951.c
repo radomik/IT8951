@@ -2,6 +2,9 @@
 #include "measure.h"
 #include <assert.h>
 
+#define LCDWaitForReady() \
+	while (bcm2835_gpio_lev(HRDY) == 0)
+
 static void LCDWrite(uint16_t preamble, uint16_t value) {
 	LCDWaitForReady();
 
@@ -47,6 +50,21 @@ void LCDWriteNData(uint16_t* pwBuf, uint32_t ulSizeWordCnt)
 	}
 
 	bcm2835_gpio_write(CS,HIGH);
+}
+
+static void LCDWriteNData2(uint8_t *data, uint32_t len) {
+	meas_start();
+	LCDWaitForReady();
+	bcm2835_gpio_write(CS, LOW);
+	
+	bcm2835_spi_transfer(0x00);
+	bcm2835_spi_transfer(0x00);
+	
+	LCDWaitForReady();
+	bcm2835_spi_transfern((char*)data, len);
+	
+	bcm2835_gpio_write(CS, HIGH);
+	meas_end();
 }
 
 //-----------------------------------------------------------
@@ -154,7 +172,7 @@ void IT8951Sleep()
 //-----------------------------------------------------------
 //Host Cmd 4---REG_RD
 //-----------------------------------------------------------
-uint16_t IT8951ReadReg(uint16_t usRegAddr)
+static uint16_t IT8951ReadReg(uint16_t usRegAddr)
 {
 	uint16_t usData;
 
@@ -168,7 +186,7 @@ uint16_t IT8951ReadReg(uint16_t usRegAddr)
 //-----------------------------------------------------------
 //Host Cmd 5---REG_WR
 //-----------------------------------------------------------
-void IT8951WriteReg(uint16_t usRegAddr,uint16_t usValue)
+static void IT8951WriteReg(uint16_t usRegAddr,uint16_t usValue)
 {
 	//Send Cmd , Register Address and Write Value
 	LCDWriteCmdCode(IT8951_TCON_REG_WR);
@@ -322,10 +340,8 @@ void IT8951LoadImgAreaStart(
 //-----------------------------------------------------------
 //Host Cmd 12---LD_IMG_END
 //-----------------------------------------------------------
-void IT8951LoadImgEnd(void)
-{
-    LCDWriteCmdCode(IT8951_TCON_LD_IMG_END);
-}
+#define IT8951LoadImgEnd() \
+    LCDWriteCmdCode(IT8951_TCON_LD_IMG_END)
 
 void GetIT8951SystemInfo(IT8951DevInfo* pstDevInfo)
 {
@@ -375,68 +391,44 @@ void IT8951WaitForDisplayReady()
 	meas_end();
 }
 
+static void _convert_bpp_4(uint8_t* pusFrameBuf, uint32_t size) {
+	meas_start();
+	uint32_t i = 0, j = 0;
+
+	while (i < size) {
+		pusFrameBuf[j] = (pusFrameBuf[i] >> 4) | ((pusFrameBuf[i + 1] >> 4) << 4);
+		j += 1;
+		i += 2;
+	}
+	meas_end();
+}
+
 //-----------------------------------------------------------
 //Display function 2---Load Image Area process
 //-----------------------------------------------------------
 void IT8951HostAreaPackedPixelWrite(
   const IT8951LdImgInfo* pstLdImgInfo,
   const IT8951AreaImgInfo* pstAreaImgInfo,
-  uint8_t *tmp
+  uint8_t bpp_mode
 ) {
 	meas_start();
 	//uint32_t j;
 	//Source buffer address of Host
 	uint8_t* pusFrameBuf = (uint8_t*)pstLdImgInfo->ulStartFBAddr;
-
-	//Set Image buffer(IT8951) Base address
-	IT8951SetImgBufBaseAddr(pstLdImgInfo->ulImgBufBaseAddr);
-	//Send Load Image start Cmd
-	IT8951LoadImgAreaStart(pstLdImgInfo, pstAreaImgInfo);
-	
-	//Host Write Data
 	uint32_t size = pstAreaImgInfo->usHeight * pstAreaImgInfo->usWidth;
 	
-	//
-	LCDWaitForReady();
-	bcm2835_gpio_write(CS,LOW);
-	
-	//todo: Optimize: Reuse another buffer
-	//tmp = realloc(tmp, size);
-	//tmp[0] = 0x00;
-	//tmp[1] = 0x00;
-	bcm2835_spi_transfer(0x00);
-	bcm2835_spi_transfer(0x00);
-	//memcpy(tmp, pusFrameBuf, size);
-	
-	bcm2835_spi_transfern((char*)pusFrameBuf, size);
-	
-	//bcm2835_gpio_write(CS,HIGH);
-	//
-	//LCDWaitForReady();
-	//bcm2835_gpio_write(CS,LOW);
-	//tmp[0] = 0x00;
-	//tmp[1] = 0x00;
-	//memcpy(tmp, pusFrameBuf+size, size);
-	
-	//bcm2835_spi_transfern((char*)tmp, size);
-	
-	bcm2835_gpio_write(CS,HIGH);
-	//
-	
-	//~ for (j = 0; j < size; j++) {
-		//~ LCDWaitForReady();
+	if (bpp_mode == 4) {
+		_convert_bpp_4(pusFrameBuf, bpp_mode);
+	}
 
-		//~ bcm2835_gpio_write(CS,LOW);
-		
-		//~ uint8_t data[] = {
-			//~ 0x00, 0x00, *pusFrameBuf++, *pusFrameBuf++
-		//~ };
-		//~ bcm2835_spi_transfern((char*)data, sizeof(data));
-
-		//~ bcm2835_gpio_write(CS,HIGH);
-	//~ }
-	//Send Load Img End Command
-	LCDWriteCmdCode(IT8951_TCON_LD_IMG_END);
+	IT8951SetImgBufBaseAddr(pstLdImgInfo->ulImgBufBaseAddr);
+	IT8951LoadImgAreaStart(pstLdImgInfo, pstAreaImgInfo);
+	
+	if (bpp_mode == 4) {
+		size /= 2;
+	}
+	LCDWriteNData2(pusFrameBuf, size);
+	IT8951LoadImgEnd();
 	meas_end();
 }
 
